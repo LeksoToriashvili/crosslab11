@@ -21,6 +21,7 @@ class CustomUserViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'User registered successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
     # Update action
     @action(detail=True, methods=['put', 'patch'])
     def update_profile(self, request, pk=None):
