@@ -17,27 +17,28 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'author', 'tags', 'created_at']
         read_only_fields = ['created_at', 'author'] #makes these fields non-editable by API users
 
-        def create(self, validated_data):
-            """
-            Handling of creation of a question
-            extracts tags data if provided in the request, or default to an empty list.
-            """
-            tags_data = validated_data.pop('tags', [])
-            question = Question.objects.create(**validated_data)
-            #process each tag in the 'tags' data
-            for tag_data in tags_data:
-                # Get or create Tag object for each tag in the request
-                tag, _ = Tag.objects.get_or_create(**tag_data)
-                # associate the tag with the question
-                question.tags.add(tag)
-            return question
+    def create(self, validated_data):
+        """
+        Handling of creation of a question
+        extracts tags data if provided in the request, or default to an empty list.
+        """
+        tags_data = validated_data.pop('tags', [])
+        question = Question.objects.create(**validated_data)
+        #process each tag in the 'tags' data
+        for tag_data in tags_data:
+            # Get or create Tag object for each tag in the request
+            tag_name =  tag_data.get('name')
+            tag, _ = Tag.objects.get_or_create(name=tag_name)
+            # associate the tag with the question
+            question.tags.add(tag)
+        return question
 
 #Serializer for Answer model
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
         fields = ['id', 'text', 'author', 'question', 'accepted', 'created_at']
-        read_only_fields = ['created_at', 'author', 'accepted']
+        read_only_fields = ['created_at', 'author']
 
 #Serializer for Like model
 class LikeSerializer(serializers.ModelSerializer):

@@ -14,7 +14,6 @@ class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all().prefetch_related('tags')
     serializer_class = QuestionSerializer
     permission_classes = (IsAuthenticated,)
-
     def perform_create(self, serializer):
         """
         associates the question with a logged_in user
@@ -30,12 +29,12 @@ class QuestionViewSet(viewsets.ModelViewSet):
         if not tag_name:
             return Response({"error": "Tag parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
         #Filter questions by the given tag_name
-        questions = Question.objects.filter(tags__name__contains=tag_name)
+        questions = Question.objects.filter(tags__name__icontains=tag_name)
         serializer = self.get_serializer(questions, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['POST'])
-    def add_tag(self, request):
+    def add_tag(self, request, pk=None):
         """
         Add a new tag
         to the specific question using serializer logic
@@ -45,7 +44,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
         if not tag_name:
             return Response({"error": "Tag parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
         #Retrieve or create the tag, ignores the second boolean value of get_or_create method.
-        tag, _ = Tag.objects.get_or_create(name=tag_name)
+        tag, created = Tag.objects.get_or_create(name=tag_name)
         question.tags.add(tag)
 
         serializer = self.get_serializer(question)
