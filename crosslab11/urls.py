@@ -41,9 +41,7 @@ schema_view = get_schema_view(
     public=True,
 )
 
-# Set up your API router
 router = routers.DefaultRouter()
-# Your API viewsets will go here
 
 urlpatterns = [
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
@@ -53,5 +51,5 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/', include('accounts.urls')),
-    path('api/core/', include('core.urls')),
+    path('api/', include('core.urls')),
 ] + debug_toolbar_urls()
