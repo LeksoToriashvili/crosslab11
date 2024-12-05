@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -97,6 +97,17 @@ WSGI_APPLICATION = 'crosslab11.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': os.getenv('DB_NAME','test_db'),
+#         'USER': os.getenv('DB_USER','admin'),
+#         'PASSWORD': os.getenv('DB_PASSWORD','Adm1np@ss'),
+#         'HOST': os.getenv('DB_HOST','localhost') or 'localhost',
+#         'PORT': os.getenv('DB_PORT','3306'),
+#     }
+# }
 
 DATABASES = {
     'default': {
