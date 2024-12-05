@@ -2,8 +2,12 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from accounts.models import CustomUser
+from . import serializers
 from .models import Question, Answer, Tag, Like
 from core.serializers import TagSerializer, QuestionSerializer, AnswerSerializer, LikeSerializer
+from django.shortcuts import get_object_or_404
 
 #question managing view
 class QuestionViewSet(viewsets.ModelViewSet):
@@ -107,3 +111,24 @@ class LikeViewSet(viewsets.ModelViewSet):
         if like.author == self.request.user:
             like.delete()
             return Response({"success":"Like removed"}, status=status.HTTP_200_OK)
+
+
+class QuestionListingViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = QuestionSerializer
+
+    def get_queryset(self):
+        return Question.objects.all().order_by('-created_at')[:10]
+
+class QuestionByUsernameViewSet(viewsets.ModelViewSet):
+    serializer_class = QuestionSerializer
+
+    def list(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        if not username:
+            return Response({"error": "username parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_object_or_404(CustomUser, username=username)
+        questions = Question.objects.filter(author=user).order_by('-created_at')[:10]
+        serializer = self.get_serializer(questions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
