@@ -1,46 +1,79 @@
+from django.db.models import Count
 from rest_framework import serializers
-from .models import Question, Answer, Tag, Like
+from core.models import Question, Answer, Tag, Like
 
-#Serializer for tag model
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['id', 'name']
 
-#Serializer for Question model
-#allows many-to-many Tag relation and makes it optional
-class QuestionSerializer(serializers.ModelSerializer):
-    tags = TagSerializer(many=True, required=False) #make tags optional
+
+###############################  answerserializer with likes count #############################
+# class AnswerSerializer(serializers.ModelSerializer):
+#     likes_count = serializers.IntegerField(read_only=True)
+#
+#     class Meta:
+#         model = Answer
+#         fields = '__all__'
+#
+#     def to_representation(self, instance):
+#         # Use annotate to add the like count to the queryset
+#         instance = Answer.objects.annotate(likes_count=Count('likes')).get(id=instance.id)
+#         representation = super().to_representation(instance)
+#         return representation
+
+
+class QuestionAnswerSerializer(serializers.ModelSerializer):
+    likes_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Answer
+        fields = '__all__'
+
+    def get_likes_count(self, obj):
+        """
+        Returns the count of likes for the given answer.
+        """
+        return Like.objects.filter(answer=obj).count()
+#################################     ---end---        ##############################################
+
+
+class QuestionsSerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source='author.username', read_only=True)
 
     class Meta:
         model = Question
-        fields = ['id', 'title', 'description', 'author', 'tags', 'created_at']
-        read_only_fields = ['created_at', 'author'] #makes these fields non-editable by API users
+        fields = '__all__'
 
-    def create(self, validated_data):
-        """
-        Handling of creation of a question
-        extracts tags data if provided in the request, or default to an empty list.
-        """
-        tags_data = validated_data.pop('tags', [])
-        question = Question.objects.create(**validated_data)
-        #process each tag in the 'tags' data
-        for tag_data in tags_data:
-            # Get or create Tag object for each tag in the request
-            tag_name =  tag_data.get('name')
-            tag, _ = Tag.objects.get_or_create(name=tag_name)
-            # associate the tag with the question
-            question.tags.add(tag)
-        return question
 
-#Serializer for Answer model
+class QuestionWithAnswerSerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    answers = QuestionAnswerSerializer(many=True, read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Question
+        fields = '__all__'
+
+    def get_answers(self, obj):
+        return Answer.objects.all()
+        #Answer.objects.filter(question=obj).order_by('created_at')
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = ['title', 'description']
+
+
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
         fields = ['id', 'text', 'author', 'question', 'accepted', 'created_at']
         read_only_fields = ['created_at', 'author']
 
-#Serializer for Like model
+
 class LikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Like

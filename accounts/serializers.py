@@ -14,16 +14,16 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'first_name': {'required': False},
             'last_name': {'required': False},
             'email': {'required': False},
-            'is_active': {'read_only': True},  # You might not want users to set this directly
-            'is_staff': {'read_only': True},  # Staff status is usually admin-controlled
+            'is_active': {'read_only': True},
+            'is_staff': {'read_only': True},
         }
 
     def create(self, validated_data):
         """
         Create a new CustomUser instance with a hashed password.
         """
-        password = validated_data.pop('password')  # Extract password before user creation
+        password = validated_data.pop('password')
         user = CustomUser.objects.create(**validated_data)
-        user.set_password(password)  # Hash the password
+        user.set_password(password)
         user.save()
         return user

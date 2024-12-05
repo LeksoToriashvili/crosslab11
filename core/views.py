@@ -1,58 +1,85 @@
+from http.client import HTTPResponse
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.models import CustomUser
-from . import serializers
-from .models import Question, Answer, Tag, Like
-from core.serializers import TagSerializer, QuestionSerializer, AnswerSerializer, LikeSerializer
-from django.shortcuts import get_object_or_404
+from core.models import Question, Tag, Answer, Like
+from core.serializers import QuestionSerializer, QuestionsSerializer, QuestionWithAnswerSerializer, AnswerSerializer, \
+    LikeSerializer
+from rest_framework.permissions import BasePermission
 
-#question managing view
+
+class IsAuthorOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return True
+        return obj.author == request.user
+
+
 class QuestionViewSet(viewsets.ModelViewSet):
-    """
-    Handles CRUD operations for questions.
-    Includes additional actions for filtering by tags, or adding tags to questions
-    """
-    queryset = Question.objects.all().prefetch_related('tags')
-    serializer_class = QuestionSerializer
-    permission_classes = (IsAuthenticated,)
+    queryset = Question.objects.prefetch_related('author').all()
+    permission_classes = [AllowAny]
+
+    def get_serializer_class(self):
+        if self.action in ['list', 'retrieve']:
+            list_type = self.request.query_params.get('list', None)
+            if list_type == 'answers':
+                return QuestionWithAnswerSerializer
+            else:
+                return QuestionsSerializer
+        else:
+            return QuestionSerializer
+
     def perform_create(self, serializer):
-        """
-        associates the question with a logged_in user
-        """
+        # serializer.save(author=self.request.user)
+
+        tag_names = self.request.data.get('tags', [])
+        # Ensure tag_names is a list
+        if not isinstance(tag_names, list):
+            raise ValueError("Tags must be provided as a list of strings.")
+
+        # Create or get existing tags
+        tags = []
+        for name in tag_names:
+            tag, created = Tag.objects.get_or_create(name=name)
+            tags.append(tag)
+
+        # Save the question with the author
+        question = serializer.save(author=self.request.user)
+
+        # Associate tags with the question
+        question.tags.set(tags)
+
+        # After saving, return the full serialized data for the question
+        question_serializer = QuestionsSerializer(question)
+        print(question_serializer.data)
+        headers = self.get_success_headers(serializer.data)
+        return Response(question_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_update(self, serializer):
         serializer.save(author=self.request.user)
 
-    @action(detail=False, methods=['GET'])
-    def tags(self, request):
-        """
-        Filter questions by tags and expects a "tag_name" query parameter in the request
-        """
-        tag_name=request.query_params.get('tag_name')
-        if not tag_name:
-            return Response({"error": "Tag parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
-        #Filter questions by the given tag_name
-        questions = Question.objects.filter(tags__name__icontains=tag_name)
-        serializer = self.get_serializer(questions, many=True)
-        return Response(serializer.data)
+    def get_permissions(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+        return [permission() for permission in permission_classes]
 
-    @action(detail=False, methods=['POST'])
-    def add_tag(self, request, pk=None):
-        """
-        Add a new tag
-        to the specific question using serializer logic
-        """
-        question = self.get_object()
-        tag_name = request.data.get('tag_name')
-        if not tag_name:
-            return Response({"error": "Tag parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
-        #Retrieve or create the tag, ignores the second boolean value of get_or_create method.
-        tag, created = Tag.objects.get_or_create(name=tag_name)
-        question.tags.add(tag)
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        list_type = self.request.query_params.get('list', None)
+        print(self.request.user)
 
-        serializer = self.get_serializer(question)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        if list_type == 'private':
+            queryset = queryset.filter(author=self.request.user)
+        elif list_type == 'public':
+            queryset = queryset.exclude(author=self.request.user)
+
+        return queryset
+
 
 class AnswerViewSet(viewsets.ModelViewSet):
     """
@@ -95,6 +122,7 @@ class LikeViewSet(viewsets.ModelViewSet):
         allows to change object creation behavior. it calls automatically when you use POST method
         """
         serializer.save(user=self.request.user)
+
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def add_like(self, request, pk=None):
         """
@@ -103,32 +131,3 @@ class LikeViewSet(viewsets.ModelViewSet):
         answer = Answer.objects.get(pk=pk)
         Like.objects.create(author=self.request.user, answer=answer, like=True)
         return Response({"success":"like added"}, status=status.HTTP_200_OK)
-
-
-    @action(detail=True, methods=['delete'], permission_classes = [IsAuthenticated])
-    def remove_like(self, request, pk=None):
-        like = self.Like.objects.get(user=self.request.user, answer_id=pk)
-        if like.author == self.request.user:
-            like.delete()
-            return Response({"success":"Like removed"}, status=status.HTTP_200_OK)
-
-
-class QuestionListingViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = QuestionSerializer
-
-    def get_queryset(self):
-        return Question.objects.all().order_by('-created_at')[:10]
-
-class QuestionByUsernameViewSet(viewsets.ModelViewSet):
-    serializer_class = QuestionSerializer
-
-    def list(self, request, *args, **kwargs):
-        username = request.data.get('username')
-        if not username:
-            return Response({"error": "username parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
-
-        user = get_object_or_404(CustomUser, username=username)
-        questions = Question.objects.filter(author=user).order_by('-created_at')[:10]
-        serializer = self.get_serializer(questions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
