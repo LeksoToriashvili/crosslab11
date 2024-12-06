@@ -7,6 +7,9 @@ from core.models import Question, Tag, Answer, Like
 from core.serializers import QuestionSerializer, QuestionsSerializer, QuestionWithAnswerSerializer, AnswerSerializer, \
     LikeSerializer
 from rest_framework.permissions import BasePermission
+from accounts.models import CustomUser
+from rest_framework.views import APIView
+
 
 
 class IsAuthorOrReadOnly(BasePermission):
@@ -180,3 +183,33 @@ class LikeViewSet(viewsets.ModelViewSet):
         return Response({"answer_id": pk, "likes_count": likes_count}, status=status.HTTP_200_OK)
 
 
+class  UserRatingAPIView(APIView):
+    """
+    calculates and returns the rating of a specific user
+    """
+    permission_classes = [AllowAny]
+    def post(self, request, *args, **kwargs):
+        username = request.data.get('username', None)
+        if not username:
+            return Response({"error":"username is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user=CustomUser.objects.get(username=username)
+        except CustomUser.DoesNotExist:
+            return Response({"error":"username not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        #calculate total answers and total likes for the user
+        user_answers = Answer.objects.filter(author=user)
+        total_answers = user_answers.count()
+        total_likes = Like.objects.filter(answer__in=user_answers).count()
+
+        #calculate rating
+        if total_answers > 0:
+            rating = total_likes / total_answers
+        else:
+            rating = 0
+
+        return Response({"username":user.username,
+                         "total_answers":total_answers,
+                         "total_likes":total_likes,
+                         "rating": round(rating, 1)}, status=status.HTTP_200_OK)
