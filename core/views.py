@@ -1,5 +1,3 @@
-from http.client import HTTPResponse
-
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -166,3 +164,19 @@ class LikeViewSet(viewsets.ModelViewSet):
 
         existing_like.delete()
         return Response({"success":"like removed"}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny], url_path='likes-count')
+    def likes_count(self, request, pk=None):
+        """
+        Retrieves the number of likes for a specific answer
+        """
+        try:
+            answer = Answer.objects.get(pk=pk)
+        except Answer.DoesNotExist:
+            return Response({"error": "Answer not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Count likes for the given answer
+        likes_count = Like.objects.filter(answer=answer).count()
+        return Response({"answer_id": pk, "likes_count": likes_count}, status=status.HTTP_200_OK)
+
+
