@@ -26,6 +26,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 class QuestionAnswerSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()
+    author_username = serializers.SerializerMethodField()
 
     class Meta:
         model = Answer
@@ -36,15 +37,22 @@ class QuestionAnswerSerializer(serializers.ModelSerializer):
         Returns the count of likes for the given answer.
         """
         return Like.objects.filter(answer=obj).count()
+
+    def get_author_username(self, obj):
+        return obj.author.username
 #################################     ---end---        ##############################################
 
 
 class QuestionsSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source='author.username', read_only=True)
+    number_of_answers = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
         fields = '__all__'
+
+    def get_number_of_answers(self, obj):
+        return obj.answers.count()
 
 
 class QuestionWithAnswerSerializer(serializers.ModelSerializer):
