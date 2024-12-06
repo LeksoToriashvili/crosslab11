@@ -1,7 +1,10 @@
 from http.client import HTTPResponse
+from re import search
 
+from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
@@ -18,9 +21,16 @@ class IsAuthorOrReadOnly(BasePermission):
         return obj.author == request.user
 
 
+class QuestionsPagination(PageNumberPagination):
+    page_size = 10  # Set default page size for this viewset
+    page_size_query_param = 'page_size'  # Allow clients to specify page size
+    max_page_size = 100  # Limit the maximum page size
+
+
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.prefetch_related('author').all()
     permission_classes = [AllowAny]
+    pagination_class = QuestionsPagination
 
     def get_serializer_class(self):
         if self.action in ['list', 'retrieve']:
@@ -71,14 +81,27 @@ class QuestionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         list_type = self.request.query_params.get('list', None)
-        print(self.request.user)
+        tag = self.request.query_params.get('tag', None)
+        username = self.request.query_params.get('username', None)
+        keyword = self.request.query_params.get('keyword', None)
 
         if list_type == 'private':
-            queryset = queryset.filter(author=self.request.user)
+            queryset = Question.objects.filter(author=self.request.user).prefetch_related('author')
         elif list_type == 'public':
-            queryset = queryset.exclude(author=self.request.user)
+            queryset = Question.objects.exclude(author=self.request.user).prefetch_related('author')
 
-        return queryset
+        if keyword:
+            queryset = queryset.filter(
+                Q(title__icontains=keyword) | Q(description__icontains=keyword)
+            )
+
+        if username:
+            queryset = queryset.filter(author__username=username)
+
+        if tag:
+            queryset = queryset.filter(tags__name=tag)
+
+        return queryset.order_by('created_at')
 
 
 class AnswerViewSet(viewsets.ModelViewSet):
