@@ -130,7 +130,7 @@ class LikeViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        allows to change object creation behavior. it calls automatically when you use POST method
+        Automatically associates the user with the like when creating it
         """
         serializer.save(user=self.request.user)
 
@@ -139,6 +139,30 @@ class LikeViewSet(viewsets.ModelViewSet):
         """
         allows to add a like to a question
         """
-        answer = Answer.objects.get(pk=pk)
-        Like.objects.create(author=self.request.user, answer=answer, like=True)
+        try:
+            answer = Answer.objects.get(pk=pk)
+        except Answer.DoesNotExist:
+            return Response({"error":"answer not found"}, status=status.HTTP_404_NOT_FOUND)
+        existing_like = Like.objects.filter(user=self.request.user, answer=answer).first()
+        if existing_like:
+            return Response({"error":"you already liked"}, status=status.HTTP_400_BAD_REQUEST)
+        Like.objects.create(user=self.request.user, answer=answer)
         return Response({"success":"like added"}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
+    def remove_like(self, request, pk=None):
+        """
+        allows to remove a like from a question
+        first checks if answer exists, or if you liked this question already, then removes
+        """
+        try:
+            answer = Answer.objects.get(pk=pk)
+        except Answer.DoesNotExist:
+            return Response({"error":"answer not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        existing_like = Like.objects.filter(user=self.request.user, answer=answer).first()
+        if not existing_like:
+            return Response({"error":"you have not liked this answer"}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing_like.delete()
+        return Response({"success":"like removed"}, status=status.HTTP_200_OK)
