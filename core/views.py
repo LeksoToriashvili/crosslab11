@@ -108,6 +108,17 @@ class AnswerViewSet(viewsets.ModelViewSet):
             return Response({"success":"Answer marked as accepted"}, status=status.HTTP_200_OK)
         return Response({"error":"you are not the author!"}, status=status.HTTP_403_FORBIDDEN)
 
+    @action(detail=False, url_path='by_question/(?P<question_id>[^/.]+)', methods=['get'], permission_classes=[AllowAny])
+    def by_question(self, request, question_id=None):
+        # question_id = request.query_params.get('question_id')
+        if not question_id:
+            return Response({"error":"question_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        answers = Answer.objects.filter(question_id=question_id)
+        if not answers.exists():
+            return Response({"error":"no answer"}, status=status.HTTP_404_NOT_FOUND)
+        serializer=self.get_serializer(answers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class LikeViewSet(viewsets.ModelViewSet):
     """
