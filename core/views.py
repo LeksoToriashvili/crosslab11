@@ -2,6 +2,7 @@ from http.client import HTTPResponse
 from re import search
 
 from django.db.models import Q
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -12,6 +13,9 @@ from core.models import Question, Tag, Answer, Like
 from core.serializers import QuestionSerializer, QuestionsSerializer, QuestionWithAnswerSerializer, AnswerSerializer, \
     LikeSerializer
 from rest_framework.permissions import BasePermission
+from accounts.models import CustomUser
+from rest_framework.views import APIView
+
 
 
 class IsAuthorOrReadOnly(BasePermission):
@@ -189,3 +193,49 @@ class LikeViewSet(viewsets.ModelViewSet):
 
         existing_like.delete()
         return Response({"success":"like removed"}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny], url_path='likes-count')
+    def likes_count(self, request, pk=None):
+        """
+        Retrieves the number of likes for a specific answer
+        """
+        try:
+            answer = Answer.objects.get(pk=pk)
+        except Answer.DoesNotExist:
+            return Response({"error": "Answer not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Count likes for the given answer
+        likes_count = Like.objects.filter(answer=answer).count()
+        return Response({"answer_id": pk, "likes_count": likes_count}, status=status.HTTP_200_OK)
+
+
+class  UserRatingAPIView(APIView):
+    """
+    calculates and returns the rating of a specific user
+    """
+    permission_classes = [AllowAny]
+    def post(self, request, *args, **kwargs):
+        username = request.data.get('username', None)
+        if not username:
+            return Response({"error":"username is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user=CustomUser.objects.get(username=username)
+        except CustomUser.DoesNotExist:
+            return Response({"error":"username not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        #calculate total answers and total likes for the user
+        user_answers = Answer.objects.filter(author=user)
+        total_answers = user_answers.count()
+        total_likes = Like.objects.filter(answer__in=user_answers).count()
+
+        #calculate rating
+        if total_answers > 0:
+            rating = total_likes / total_answers
+        else:
+            rating = 0
+
+        return Response({"username":user.username,
+                         "total_answers":total_answers,
+                         "total_likes":total_likes,
+                         "rating": round(rating, 1)}, status=status.HTTP_200_OK)
