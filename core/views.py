@@ -17,7 +17,6 @@ from accounts.models import CustomUser
 from rest_framework.views import APIView
 
 
-
 class IsAuthorOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in ['GET', 'HEAD', 'OPTIONS']:
@@ -70,7 +69,10 @@ class QuestionViewSet(viewsets.ModelViewSet):
         question_serializer = QuestionsSerializer(question)
         print(question_serializer.data)
         headers = self.get_success_headers(serializer.data)
-        return Response(question_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(
+            question_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers)
 
     def perform_update(self, serializer):
         serializer.save(author=self.request.user)
@@ -118,32 +120,41 @@ class AnswerViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     def perform_create(self, serializer):
-        #only logged-in user saves this answer as the answers author
+        # only logged-in user saves this answer as the answers author
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'],
+            permission_classes=[IsAuthenticated])
     def mark_accepted(self, request, pk=None):
         """
         Custom action to mark an answer as accepted
         Only the questions author is allowed to mark an answer
         """
         answer = self.get_object()
-        #following checks if the request user questions author, if not returns a 403 error
+        # following checks if the request user questions author, if not returns
+        # a 403 error
         if answer.question.author == self.request.user:
             answer.accepted = True
             answer.save()
-            return Response({"success":"Answer marked as accepted"}, status=status.HTTP_200_OK)
-        return Response({"error":"you are not the author!"}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"success": "Answer marked as accepted"}, status=status.HTTP_200_OK)
+        return Response({"error": "you are not the author!"},
+                        status=status.HTTP_403_FORBIDDEN)
 
-    @action(detail=False, url_path='by_question/(?P<question_id>[^/.]+)', methods=['get'], permission_classes=[AllowAny])
+    @action(detail=False,
+            url_path='by_question/(?P<question_id>[^/.]+)',
+            methods=['get'],
+            permission_classes=[AllowAny])
     def by_question(self, request, question_id=None):
         # question_id = request.query_params.get('question_id')
         if not question_id:
-            return Response({"error":"question_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "question_id is required"},
+                            status=status.HTTP_400_BAD_REQUEST)
         answers = Answer.objects.filter(question_id=question_id)
         if not answers.exists():
-            return Response({"error":"no answer"}, status=status.HTTP_404_NOT_FOUND)
-        serializer=self.get_serializer(answers, many=True)
+            return Response({"error": "no answer"},
+                            status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(answers, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -161,22 +172,23 @@ class LikeViewSet(viewsets.ModelViewSet):
         """
         serializer.save(user=self.request.user)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
-    def add_like(self, request, pk=None):
-        """
-        allows to add a like to a question
-        """
-        try:
-            answer = Answer.objects.get(pk=pk)
-        except Answer.DoesNotExist:
-            return Response({"error":"answer not found"}, status=status.HTTP_404_NOT_FOUND)
-        existing_like = Like.objects.filter(user=self.request.user, answer=answer).first()
-        if existing_like:
-            return Response({"error":"you already liked"}, status=status.HTTP_400_BAD_REQUEST)
-        Like.objects.create(user=self.request.user, answer=answer)
-        return Response({"success":"like added"}, status=status.HTTP_200_OK)
+    # @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    # def add_like(self, request, pk=None):
+    #     """
+    #     allows to add a like to a question
+    #     """
+    #     try:
+    #         answer = Answer.objects.get(pk=pk)
+    #     except Answer.DoesNotExist:
+    #         return Response({"error":"answer not found"}, status=status.HTTP_404_NOT_FOUND)
+    #     existing_like = Like.objects.filter(user=self.request.user, answer=answer).first()
+    #     if existing_like:
+    #         return Response({"error":"you already liked"}, status=status.HTTP_400_BAD_REQUEST)
+    #     Like.objects.create(user=self.request.user, answer=answer)
+    #     return Response({"success":"like added"}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['delete'],
+            permission_classes=[IsAuthenticated])
     def remove_like(self, request, pk=None):
         """
         allows to remove a like from a question
@@ -185,16 +197,22 @@ class LikeViewSet(viewsets.ModelViewSet):
         try:
             answer = Answer.objects.get(pk=pk)
         except Answer.DoesNotExist:
-            return Response({"error":"answer not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "answer not found"},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        existing_like = Like.objects.filter(user=self.request.user, answer=answer).first()
+        existing_like = Like.objects.filter(
+            user=self.request.user, answer=answer).first()
         if not existing_like:
-            return Response({"error":"you have not liked this answer"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "you have not liked this answer"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         existing_like.delete()
-        return Response({"success":"like removed"}, status=status.HTTP_200_OK)
+        return Response({"success": "like removed"}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['get'], permission_classes=[AllowAny], url_path='likes-count')
+    @action(detail=True,
+            methods=['get'],
+            permission_classes=[AllowAny],
+            url_path='likes-count')
     def likes_count(self, request, pk=None):
         """
         Retrieves the number of likes for a specific answer
@@ -202,40 +220,73 @@ class LikeViewSet(viewsets.ModelViewSet):
         try:
             answer = Answer.objects.get(pk=pk)
         except Answer.DoesNotExist:
-            return Response({"error": "Answer not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Answer not found"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         # Count likes for the given answer
         likes_count = Like.objects.filter(answer=answer).count()
-        return Response({"answer_id": pk, "likes_count": likes_count}, status=status.HTTP_200_OK)
+        return Response({"answer_id": pk,
+                         "likes_count": likes_count},
+                        status=status.HTTP_200_OK)
 
 
-class  UserRatingAPIView(APIView):
+class UserRatingAPIView(APIView):
     """
     calculates and returns the rating of a specific user
     """
     permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         username = request.data.get('username', None)
         if not username:
-            return Response({"error":"username is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "username is required"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user=CustomUser.objects.get(username=username)
+            user = CustomUser.objects.get(username=username)
         except CustomUser.DoesNotExist:
-            return Response({"error":"username not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "username not found"},
+                            status=status.HTTP_404_NOT_FOUND)
 
-        #calculate total answers and total likes for the user
+        # calculate total answers and total likes for the user
         user_answers = Answer.objects.filter(author=user)
         total_answers = user_answers.count()
         total_likes = Like.objects.filter(answer__in=user_answers).count()
 
-        #calculate rating
+        # calculate rating
         if total_answers > 0:
             rating = total_likes / total_answers
         else:
             rating = 0
 
-        return Response({"username":user.username,
-                         "total_answers":total_answers,
-                         "total_likes":total_likes,
+        return Response({"username": user.username,
+                         "total_answers": total_answers,
+                         "total_likes": total_likes,
                          "rating": round(rating, 1)}, status=status.HTTP_200_OK)
+
+
+class UserAnswerCountView(APIView):
+    """
+    retrieves the number of answers for a specific user
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        user_id = request.data.get("id", None)
+        username = request.data.get("username", None)
+        if not user_id:
+            return Response({"error": "user id is required"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = CustomUser.objects.get(id=user_id)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "username not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        answer_count = Answer.objects.filter(author=user).count()
+        username = CustomUser.objects.get(id=user_id).username
+        user_answer_likes = Like.objects.filter(user_id=user).count()
+        return Response({"username": username,
+                         "answer_count": answer_count,
+                         "user_answer_likes": user_answer_likes},
+                        status=status.HTTP_200_OK)
