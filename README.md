@@ -206,7 +206,7 @@ Mark answer as accepted
 Like an answer
 
     Endpoint: POST api/likes/
-    Description: adds like to a specific answer, which's id is in the request
+    Description: adds like to a specific answer, which id is in the request
     Request Payload:
     {
         "answer": 12
