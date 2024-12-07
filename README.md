@@ -259,3 +259,9 @@ Notes
 - All endpoints related to POST, PUT, or DELETE actions require authentication using a valid JWT token.
 
 - Use /api/token/ to obtain tokens for authenticated access
+
+## Contributors
+- **Lekso Toriashvili** [GitHub](https://github.com/LeksoToriashvili)
+- **Mariam Gaprindashvili** [GitHub](https://github.com/MarBifrost)
+
+
