@@ -264,4 +264,10 @@ Notes
 - **Lekso Toriashvili** [GitHub](https://github.com/LeksoToriashvili)
 - **Mariam Gaprindashvili** [GitHub](https://github.com/MarBifrost)
 
+---
+
+Thank you for your interest in this project! 
+If you have any suggestions or ideas, feel free to submit an issue or a pull request. 
+Happy coding! 😊
+
 
