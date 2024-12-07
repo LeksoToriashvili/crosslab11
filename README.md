@@ -226,7 +226,7 @@ Retrieve all likes of a specific answer
 5. User Rating management
 ```bash
     Endpoint: POST /api/rating/
-    Description: Retrieves user's calculated rating according to total answers and amount of liked answers
+    Description: Retrieves users calculated rating according to total answers and amount of liked answers
     Request Payload:
     {
         "username":"<username>"
@@ -236,7 +236,7 @@ Retrieve all likes of a specific answer
 6. User Statistics management
 ```bash
     Endpoint: POST api/answers-count/
-    Description: Retrieves user's username, answer count and user's total likes
+    Description: Retrieves users username, answer count and user's total likes
     Request Payload:
     {
         "id":{user_id}
