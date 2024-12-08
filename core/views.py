@@ -2,9 +2,11 @@ from http.client import HTTPResponse
 from re import search
 
 from django.db.models import Q
+from django.http import JsonResponse
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -108,6 +110,18 @@ class QuestionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tags__name=tag)
 
         return queryset.order_by('created_at')
+
+
+def accept_answer(request, answer_id):
+    answer = get_object_or_404(Answer, id=answer_id)
+    answer.accept()
+    return JsonResponse({'status': 'accepted'})
+
+
+def reject_answer(request, answer_id):
+    answer = get_object_or_404(Answer, id=answer_id)
+    answer.deselect()
+    return JsonResponse({'status': 'deselected'})
 
 
 class AnswerViewSet(viewsets.ModelViewSet):
