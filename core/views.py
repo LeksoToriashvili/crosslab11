@@ -236,7 +236,7 @@ class UserRatingAPIView(APIView):
     """
     permission_classes = [AllowAny]
 
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         username = request.data.get('username', None)
         if not username:
             return Response({"error": "username is required"},
@@ -271,7 +271,7 @@ class UserAnswerCountView(APIView):
     """
     permission_classes = [AllowAny]
 
-    def post(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         user_id = request.data.get("id", None)
         username = request.data.get("username", None)
         if not user_id:
