@@ -22,6 +22,20 @@ class Answer(models.Model):
     def __str__(self):
         return self.text
 
+    def accept(self):
+        """Mark this answer as accepted."""
+        if not self.accepted:
+            # Deselect previously accepted answers for the question
+            self.question.answers.update(accepted=False)
+            self.accepted = True
+            self.save()
+
+    def deselect(self):
+        """Unmark this answer as accepted."""
+        if self.accepted:
+            self.accepted = False
+            self.save()
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=255)

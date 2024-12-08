@@ -1,7 +1,8 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from core.views import QuestionViewSet, AnswerViewSet, LikeViewSet, UserRatingAPIView, UserAnswerCountView
+from core.views import QuestionViewSet, AnswerViewSet, LikeViewSet, UserRatingAPIView, UserAnswerCountView, \
+    accept_answer, reject_answer
 
 router = DefaultRouter()
 router.register(r'questions', QuestionViewSet, basename='questions')
@@ -21,4 +22,6 @@ urlpatterns = [
         'answers-count/',
         UserAnswerCountView.as_view(),
         name='answers-count'),
+    path('acceptorreject/<int:answer_id>/accept/', accept_answer, name='accept_answer'),
+    path('acceptorreject/<int:answer_id>/reject/', reject_answer, name='deselect_answer'),
 ]
