@@ -13,7 +13,7 @@ class QuestionAdmin(admin.ModelAdmin):
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
     model = Answer
-    list_display = ['question', 'author', 'accepted']
+    list_display = ['text', 'question', 'author', 'accepted']
     list_filter = ['question', 'author', 'accepted']
     search_fields = ['question__title', 'author__username']
 

@@ -9,24 +9,10 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 
-###############################  answerserializer with likes count #############################
-# class AnswerSerializer(serializers.ModelSerializer):
-#     likes_count = serializers.IntegerField(read_only=True)
-#
-#     class Meta:
-#         model = Answer
-#         fields = '__all__'
-#
-#     def to_representation(self, instance):
-#         # Use annotate to add the like count to the queryset
-#         instance = Answer.objects.annotate(likes_count=Count('likes')).get(id=instance.id)
-#         representation = super().to_representation(instance)
-#         return representation
-
-
 class QuestionAnswerSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()
     author_username = serializers.SerializerMethodField()
+    liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Answer
@@ -40,7 +26,12 @@ class QuestionAnswerSerializer(serializers.ModelSerializer):
 
     def get_author_username(self, obj):
         return obj.author.username
-#################################     ---end---        ##############################################
+
+    def get_liked(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Like.objects.filter(answer=obj, user=request.user).exists()
+        return False
 
 
 class QuestionsSerializer(serializers.ModelSerializer):
@@ -63,10 +54,6 @@ class QuestionWithAnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = '__all__'
-
-    def get_answers(self, obj):
-        return Answer.objects.all()
-        #Answer.objects.filter(question=obj).order_by('created_at')
 
 
 class QuestionSerializer(serializers.ModelSerializer):
