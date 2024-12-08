@@ -37,6 +37,7 @@ class QuestionAnswerSerializer(serializers.ModelSerializer):
 class QuestionsSerializer(serializers.ModelSerializer):
     author_username = serializers.CharField(source='author.username', read_only=True)
     number_of_answers = serializers.SerializerMethodField()
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = Question
