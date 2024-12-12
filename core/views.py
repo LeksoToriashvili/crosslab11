@@ -13,7 +13,7 @@ from rest_framework.response import Response
 
 from core.models import Question, Tag, Answer, Like
 from core.serializers import QuestionSerializer, QuestionsSerializer, QuestionWithAnswerSerializer, AnswerSerializer, \
-    LikeSerializer
+    LikeSerializer, TagSerializer
 from rest_framework.permissions import BasePermission
 from accounts.models import CustomUser
 from rest_framework.views import APIView
@@ -110,6 +110,12 @@ class QuestionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tags__name=tag)
 
         return queryset.order_by('created_at')
+
+
+class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    http_method_names = ['get', 'head', 'options']
 
 
 def accept_answer(request, answer_id):
